@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voter Search Portal</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-9MXESXEBR1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-9MXESXEBR1');
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-full mx-auto">
+    <h1 class="text-3xl font-bold text-center text-indigo-900 mb-2">Voter Search Portal</h1>
+    <p class="text-center text-gray-500 mb-5 text-sm">Andhra Pradesh Electoral Data</p>
+
+    <!-- Constituency Selector -->
+    <div class="bg-white p-4 rounded-xl shadow mb-4">
+      <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Select Constituency</label>
+      <div class="flex gap-3 flex-wrap">
+        <button id="btn_anantapur" onclick="switchConstituency('anantapur')" class="px-6 py-2 rounded-full font-bold border-2 border-indigo-600 bg-indigo-600 text-white transition-all">Anantapur</button>
+        <button id="btn_dharmavaram" onclick="switchConstituency('dharmavaram')" class="px-6 py-2 rounded-full font-bold border-2 border-indigo-600 text-indigo-600 bg-white transition-all">Dharmavaram</button>
+        <button id="btn_penukonda" onclick="switchConstituency('penukonda')" class="px-6 py-2 rounded-full font-bold border-2 border-indigo-600 text-indigo-600 bg-white transition-all">Penukonda</button>
+        <button id="btn_tadipatri" onclick="switchConstituency('tadipatri')" class="px-6 py-2 rounded-full font-bold border-2 border-indigo-600 text-indigo-600 bg-white transition-all">Tadipatri</button>
+        <button id="btn_hindupur" onclick="switchConstituency('hindupur')" class="px-6 py-2 rounded-full font-bold border-2 border-indigo-600 text-indigo-600 bg-white transition-all">Hindupur</button>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status" class="bg-blue-100 text-blue-800 p-3 rounded mb-4 text-center font-semibold">Loading voter data...</div>
+
+    <!-- Search Box -->
+    <div class="bg-white p-5 rounded-xl shadow mb-5">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div><label class="block text-xs font-bold uppercase text-gray-500 mb-1">Voter Name</label><input id="s_name" type="text" placeholder="Enter name" class="w-full border rounded-lg px-3 py-2 outline-none"></div>
+        <div><label class="block text-xs font-bold uppercase text-gray-500 mb-1">Relation Name</label><input id="s_relation" type="text" placeholder="Enter relation" class="w-full border rounded-lg px-3 py-2 outline-none"></div>
+        <div><label class="block text-xs font-bold uppercase text-gray-500 mb-1">House Number</label><input id="s_hno" type="text" placeholder="e.g. 1-23" class="w-full border rounded-lg px-3 py-2 outline-none"></div>
+        <div><label class="block text-xs font-bold uppercase text-gray-500 mb-1">EPIC Number</label><input id="s_epic" type="text" placeholder="e.g. ABC123" class="w-full border rounded-lg px-3 py-2 outline-none"></div>
+        <div><label class="block text-xs font-bold uppercase text-gray-500 mb-1">Part No</label><input id="s_part" type="text" placeholder="e.g. 16" class="w-full border rounded-lg px-3 py-2 outline-none"></div>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button id="searchBtn" onclick="doSearch()" disabled class="bg-indigo-600 text-white font-bold px-8 py-3 rounded-lg disabled:bg-gray-400">Search</button>
+        <button onclick="clearAll()" class="bg-gray-200 text-gray-800 font-semibold px-6 py-3 rounded-lg">Clear</button>
+      </div>
+    </div>
+
+    <div id="count" class="mb-3 font-semibold text-gray-700 text-lg"></div>
+
+    <!-- Results Table -->
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-indigo-900 text-white sticky top-0">
+            <tr>
+              <th class="p-3 text-left whitespace-nowrap">Part No</th>
+              <th class="p-3 text-left whitespace-nowrap">SL No</th>
+              <th class="p-3 text-left whitespace-nowrap">Voter Name</th>
+              <th class="p-3 text-left whitespace-nowrap">Relation Name</th>
+              <th class="p-3 text-left whitespace-nowrap">Relation Type</th>
+              <th class="p-3 text-left whitespace-nowrap">Age</th>
+              <th class="p-3 text-left whitespace-nowrap">Sex</th>
+              <th class="p-3 text-left whitespace-nowrap">House No</th>
+              <th class="p-3 text-left whitespace-nowrap">EPIC</th>
+            </tr>
+          </thead>
+          <tbody id="tbody" class="divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="hidden p-8 text-center text-gray-500">No results found.</div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pageNav" class="mt-5 flex justify-center items-center gap-3 hidden">
+      <button onclick="prevPage()" class="bg-indigo-600 text-white font-bold px-5 py-2 rounded-lg">← Previous</button>
+      <span id="pageInfo" class="font-semibold text-gray-700"></span>
+      <button onclick="nextPage()" class="bg-indigo-600 text-white font-bold px-5 py-2 rounded-lg">Next →</button>
+    </div>
+  </div>
+
+  <script>
+    let allData = [];
+    let searchResults = [];
+    let currentPage = 1;
+    let activeConstituency = 'anantapur';
+    const PER_PAGE = 50;
+
+    const config = {
+      anantapur: { file: './anantapur_data.json', label: 'Anantapur' },
+      dharmavaram: { file: './dharmavaram_data.json', label: 'Dharmavaram' },
+      penukonda: { file: './penukonda_data.json', label: 'Penukonda' },
+      tadipatri: { file: './tadipatri_data.json', label: 'Tadipatri' },
+      hindupur: { file: './hindupur_data.json', label: 'Hindupur' }
+    };
+
+    function norm(v) { return String(v ?? '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+    function rawNorm(v) { return String(v ?? '').toUpperCase().replace(/\s+/g, '').trim(); }
+
+    async function loadData(name) {
+      const status = document.getElementById('status');
+      status.className = "bg-blue-100 text-blue-800 p-3 rounded mb-4 text-center font-semibold";
+      status.innerText = `Loading ${config[name].label} data...`;
+      document.getElementById('searchBtn').disabled = true;
+      try {
+        const r = await fetch(config[name].file, { cache: 'no-store' });
+        allData = await r.json();
+        status.className = "bg-green-100 text-green-800 p-3 rounded mb-4 text-center font-semibold";
+        status.innerText = `✅ ${config[name].label}: ${allData.length.toLocaleString()} records loaded.`;
+        document.getElementById('searchBtn').disabled = false;
+        
+        // Clear previous searches when swapping constituency
+        clearAll(); 
+      } catch (e) {
+        status.className = "bg-red-100 text-red-800 p-3 rounded mb-4 text-center font-semibold";
+        status.innerText = "❌ Error loading file. Check if the JSON is valid and present.";
+      }
+    }
+
+    function switchConstituency(name) {
+      activeConstituency = name;
+      Object.keys(config).forEach(k => {
+        document.getElementById(`btn_${k}`).className = (k === name) 
+          ? "px-6 py-2 rounded-full font-bold border-2 border-indigo-600 bg-indigo-600 text-white transition-all"
+          : "px-6 py-2 rounded-full font-bold border-2 border-indigo-600 text-indigo-600 bg-white transition-all";
+      });
+      loadData(name);
+    }
+
+    function doSearch() {
+      const qName = norm(document.getElementById('s_name').value);
+      const qRel = norm(document.getElementById('s_relation').value);
+      const qHno = rawNorm(document.getElementById('s_hno').value);
+      const qEpic = rawNorm(document.getElementById('s_epic').value);
+      const qPart = document.getElementById('s_part').value.trim();
+
+      searchResults = allData.filter(d => {
+        return (!qName || norm(d['NAME_ENG']).includes(qName)) &&
+               (!qRel || norm(d['RELATION NAME']).includes(qRel)) &&
+               (!qHno || rawNorm(d['New_Hno']).includes(qHno)) &&
+               (!qEpic || rawNorm(d['EPIC']).includes(qEpic)) &&
+               (!qPart || String(d['part_no'] || '').trim() === qPart);
+      });
+      currentPage = 1;
+      render();
+    }
+
+    function render() {
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+      
+      if (searchResults.length === 0) {
+        document.getElementById('count').innerText = '';
+        document.getElementById('empty').classList.remove('hidden');
+        document.getElementById('pageNav').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('count').innerText = `Found ${searchResults.length} results.`;
+      document.getElementById('empty').classList.add('hidden');
+      const start = (currentPage - 1) * PER_PAGE;
+      const pageData = searchResults.slice(start, start + PER_PAGE);
+
+      pageData.forEach(d => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-gray-50 border-b">
+            <td class="p-3 font-bold text-indigo-700">${d['part_no'] || '-'}</td>
+            <td class="p-3">${d['slnoinpart'] || '-'}</td>
+            <td class="p-3 font-bold text-gray-900">${d['NAME_ENG'] || '-'}</td>
+            <td class="p-3">${d['RELATION NAME'] || '-'}</td>
+            <td class="p-3 text-indigo-800">${d['RLTY'] || '-'}</td>
+            <td class="p-3">${d['age'] || '-'}</td>
+            <td class="p-3 font-bold">${d['sex'] || '-'}</td>
+            <td class="p-3 font-mono">${d['New_Hno'] || '-'}</td>
+            <td class="p-3 font-mono text-indigo-600">${d['EPIC'] || '-'}</td>
+          </tr>`;
+      });
+
+      const totalPages = Math.ceil(searchResults.length / PER_PAGE);
+      document.getElementById('pageNav').classList.toggle('hidden', totalPages <= 1);
+      if (totalPages > 1) {
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${totalPages}`;
+      }
+    }
+
+    function nextPage() { if (currentPage < Math.ceil(searchResults.length / PER_PAGE)) { currentPage++; render(); window.scrollTo(0,0); } }
+    function prevPage() { if (currentPage > 1) { currentPage--; render(); window.scrollTo(0,0); } }
+    
+    function clearAll() { 
+      ['s_name','s_relation','s_hno','s_epic','s_part'].forEach(id => document.getElementById(id).value = ''); 
+      searchResults = [];
+      document.getElementById('tbody').innerHTML = '';
+      document.getElementById('count').innerText = '';
+      document.getElementById('pageNav').classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('searchBtn').disabled) doSearch(); });
+    loadData('anantapur');
+  </script>
+</body>
+</html>
